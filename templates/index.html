@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 拍照出题 · 智谱版</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        }
+        body {
+            background: linear-gradient(145deg, #f5f7fa 0%, #e9edf2 100%);
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1000px;
+            width: 100%;
+            background: white;
+            border-radius: 32px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+            padding: 40px;
+        }
+        h1 {
+            font-size: 28px;
+            font-weight: 600;
+            color: #0b1c33;
+            margin-top: 0;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .subtitle {
+            color: #5e6f8c;
+            margin-bottom: 32px;
+            font-size: 16px;
+            border-left: 4px solid #3b82f6;
+            padding-left: 16px;
+            background: #f8fafc;
+            padding: 16px;
+            border-radius: 12px;
+        }
+        .upload-area {
+            border: 2px dashed #cbd5e1;
+            background: #f8fafc;
+            border-radius: 24px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 24px;
+        }
+        .upload-area:hover {
+            border-color: #3b82f6;
+            background: #f0f7ff;
+        }
+        .upload-area.dragover {
+            border-color: #2563eb;
+            background: #eff6ff;
+        }
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+        .upload-text {
+            font-size: 18px;
+            font-weight: 500;
+            color: #1e293b;
+            margin-bottom: 8px;
+        }
+        .upload-hint {
+            color: #64748b;
+            font-size: 14px;
+        }
+        #fileInput {
+            display: none;
+        }
+        .preview {
+            display: none;
+            margin-bottom: 24px;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            border: 1px solid #e2e8f0;
+            background: white;
+        }
+        .preview img {
+            max-width: 100%;
+            max-height: 300px;
+            display: block;
+            margin: 0 auto;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+            background: white;
+            border-radius: 24px;
+            margin-bottom: 24px;
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .result {
+            display: none;
+            margin-top: 32px;
+        }
+        .original-panel, .generated-panel {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        .panel-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #0b1c33;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .panel-content {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 14px;
+            line-height: 1.6;
+            color: #1e293b;
+            font-size: 15px;
+            white-space: pre-wrap;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .btn {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 40px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid #2563eb;
+        }
+        .btn:hover {
+            background: #2563eb;
+            transform: translateY(-1px);
+            box-shadow: 0 8px 16px rgba(37, 99, 235, 0.2);
+        }
+        .error {
+            color: #dc2626;
+            background: #fee2e2;
+            border-radius: 12px;
+            padding: 16px;
+            margin-top: 16px;
+            display: none;
+        }
+        .footer {
+            margin-top: 32px;
+            text-align: center;
+            color: #64748b;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📸 智谱 · 拍照出题</h1>
+        <div class="subtitle">
+            ⚡ 上传初高中题目照片 → OCR 提取原文 → AI 生成难度相似的新题
+        </div>
+
+        <!-- 上传区 -->
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📄</div>
+            <div class="upload-text">点击或拖拽图片到此处</div>
+            <div class="upload-hint">支持 JPG、PNG，单张 ≤ 10MB</div>
+        </div>
+        <input type="file" id="fileInput" accept="image/*">
+
+        <!-- 预览图 -->
+        <div class="preview" id="preview">
+            <img id="previewImg" src="" alt="预览图">
+        </div>
+
+        <!-- 加载动画 -->
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <div style="color: #475569; font-weight: 500;">智谱 AI 正在读题 + 出题...</div>
+            <div style="color: #94a3b8; font-size: 14px; margin-top: 8px;">OCR 识别 + 生成相似题，约 5-8 秒</div>
+        </div>
+
+        <!-- 错误提示 -->
+        <div class="error" id="error"></div>
+
+        <!-- 结果展示区 -->
+        <div class="result" id="result">
+            <div class="original-panel">
+                <div class="panel-title">📝 原题文字（OCR 提取）</div>
+                <div class="panel-content" id="originalText"></div>
+            </div>
+            <div class="generated-panel">
+                <div class="panel-title">✨ 相似新题（AI 生成）</div>
+                <div class="panel-content" id="generatedText"></div>
+            </div>
+            <button class="btn" id="newBtn" style="width: 100%;">🔄 换一道题（重新生成）</button>
+        </div>
+
+        <div class="footer">
+            由 GLM-4V-Flash（免费OCR）+ GLM-4-Flash（免费出题）驱动
+        </div>
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const preview = document.getElementById('preview');
+        const previewImg = document.getElementById('previewImg');
+        const loading = document.getElementById('loading');
+        const result = document.getElementById('result');
+        const error = document.getElementById('error');
+        const originalText = document.getElementById('originalText');
+        const generatedText = document.getElementById('generatedText');
+        const newBtn = document.getElementById('newBtn');
+
+        // 当前图片的 base64（用于重新生成）
+        let currentImageBase64 = null;
+
+        // 上传区域点击
+        uploadArea.addEventListener('click', () => fileInput.click());
+
+        // 拖拽支持
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            if (e.dataTransfer.files.length) {
+                fileInput.files = e.dataTransfer.files;
+                handleFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        // 选择文件
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length) handleFile(e.target.files[0]);
+        });
+
+        // 处理上传
+        function handleFile(file) {
+            if (!file.type.startsWith('image/')) {
+                showError('请上传图片文件');
+                return;
+            }
+            if (file.size > 10 * 1024 * 1024) {
+                showError('图片不能超过 10MB');
+                return;
+            }
+
+            // 预览
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                previewImg.src = e.target.result;
+                preview.style.display = 'block';
+                currentImageBase64 = e.target.result.split(',')[1];  // 去掉 data:image/xxx;base64, 前缀
+                
+                // 自动上传
+                uploadImage(file);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // 上传到后端
+        async function uploadImage(file) {
+            // 显示加载，隐藏结果和错误
+            loading.style.display = 'block';
+            result.style.display = 'none';
+            error.style.display = 'none';
+
+            const formData = new FormData();
+            formData.append('image', file);
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) throw new Error(`服务器错误: ${response.status}`);
+                
+                const data = await response.json();
+                
+                if (data.error) throw new Error(data.error);
+                
+                // 显示结果
+                originalText.textContent = data.original;
+                generatedText.textContent = data.generated;
+                result.style.display = 'block';
+                loading.style.display = 'none';
+                
+            } catch (err) {
+                showError(err.message);
+            }
+        }
+
+        // 换一道题（重新生成）
+        newBtn.addEventListener('click', async () => {
+            if (!currentImageBase64) return;
+            
+            loading.style.display = 'block';
+            result.style.display = 'none';
+            error.style.display = 'none';
+            
+            try {
+                // 直接调 OCR + 生成接口，用当前的 base64
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ image_base64: currentImageBase64 })
+                });
+                
+                if (!response.ok) throw new Error(`服务器错误: ${response.status}`);
+                
+                const data = await response.json();
+                if (data.error) throw new Error(data.error);
+                
+                originalText.textContent = data.original;
+                generatedText.textContent = data.generated;
+                result.style.display = 'block';
+                loading.style.display = 'none';
+                
+            } catch (err) {
+                showError(err.message);
+            }
+        });
+
+        function showError(msg) {
+            error.textContent = '❌ ' + msg;
+            error.style.display = 'block';
+            loading.style.display = 'none';
+        }
+    </script>
+</body>
+</html>
