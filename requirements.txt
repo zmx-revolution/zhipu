@@ -1,5 +1,5 @@
 flask==2.3.3
-zhipuai==2.1.5
+zhipuai
 python-dotenv==1.0.0
 gunicorn==21.2.0
 Pillow==10.1.0
