@@ -109,5 +109,5 @@ def upload():
             return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))  # 👈 Render 会自动传入 PORT
+    port = int(os.environ.get('PORT', 8080))  # 👈 Render 会自动传入 PORT
     app.run(host='0.0.0.0', port=port, debug=False)  # 👈 debug 必须 False
